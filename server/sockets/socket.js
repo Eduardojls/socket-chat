@@ -25,22 +25,26 @@ io.on('connection', (client) => {
         users.setUser(client.id, data.name, data.room);
         const personsByRoom = users.getUsersByRoom(data.room);
         client.broadcast.to(data.room).emit('listar-personas', personsByRoom);
+        client.broadcast.to(data.room).emit('crear-mensaje', createMessage('Administrator', `${data.name} has joined the chat`));
+
         callback(personsByRoom);
     });
 
     client.on('disconnect', () => {
 
         const deletedUser = users.deleteUser(client.id);
+        if(!deletedUser) return;
         client.broadcast.to(deletedUser.room).emit('crear-mensaje', createMessage('Administrator', `${deletedUser.name} has left the chat`));
         client.broadcast.to(deletedUser.room).emit('listar-personas', users.getUsersByRoom(deletedUser.room));
     });
 
-    client.on('crear-mensaje', (data) => {
+    client.on('crear-mensaje', (data, callback) => {
 
         let person = users.getUser(client.id);
         let message = createMessage(person.name, data.message);
-        client.emit('crear-mensaje', message);
         client.broadcast.to(person.room).emit('crear-mensaje', message);
+
+        callback(message);
     });
 
     client.on('mensaje-privado', (data) => {
